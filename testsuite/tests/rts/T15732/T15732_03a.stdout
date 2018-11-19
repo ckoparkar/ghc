@@ -1,0 +1,4 @@
+args: ["@T15732_03.response"]
+argsR: ["+RTS","-F3","-G4","-RTS"]
+oldGenFactor: 2.0
+generations: 2

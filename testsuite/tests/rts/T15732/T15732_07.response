@@ -1,0 +1,8 @@
+a simple command line
+arg 'foo' is single quoted
+arg \"bar\" is double quoted
+arg \"foo bar\" has embedded whitespace
+arg 'Jack said \\'hi\\'' has single quotes
+arg 'Jack said \\\"hi\\\"' has double quotes
+a b c d e f g h i j k l m n o p q r s t u v w x y z 1 2 3 4 5 6 7 8 9
+"trailing-whitespace "

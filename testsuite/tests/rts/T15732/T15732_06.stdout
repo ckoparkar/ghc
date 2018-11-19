@@ -1,0 +1,4 @@
+args: ["a","b","c","@T15732_06.response"]
+argsR: ["a","b","c","blah","+RTS","-G4","-RTS"]
+oldGenFactor: 3.0
+generations: 2

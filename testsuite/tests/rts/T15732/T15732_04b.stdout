@@ -1,0 +1,3 @@
+argsR: ["a","b","c","+RTS","-F5","-RTS","+RTS","-G4","-RTS","d"]
+oldGenFactor: 3.0
+generations: 2

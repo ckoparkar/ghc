@@ -287,3 +287,6 @@ extern char  **prog_argv;
 */
 extern int      rts_argc;  /* ditto */
 extern char   **rts_argv;
+
+/* Used by getArgsWithResponsefiles in GHC.ResponseFile. */
+HsBool rtsSupportsResponseFiles (void);

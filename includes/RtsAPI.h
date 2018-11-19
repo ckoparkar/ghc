@@ -75,6 +75,9 @@ typedef struct {
     // additional RTS options
     const char *rts_opts;
 
+    // True if GHC was passed -expand-response-files
+    HsBool expand_response_files;
+
     // True if GHC was not passed -no-hs-main
     HsBool rts_hs_main;
 
@@ -287,7 +290,6 @@ extern void setProgArgv            ( int argc, char *argv[] );
 extern void getFullProgArgv        ( int *argc, char **argv[] );
 extern void setFullProgArgv        ( int argc, char *argv[] );
 extern void freeFullProgArgv       ( void ) ;
-
 /* exit() override */
 extern void (*exitFn)(int);
 

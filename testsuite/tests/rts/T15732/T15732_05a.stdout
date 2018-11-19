@@ -1,0 +1,2 @@
+args: ["+RTS","-F3","-RTS","a","b","c","--","@T15732_05.response"]
+argsR: ["+RTS","-F3","-RTS","a","b","c","--","@T15732_05.response"]

@@ -962,6 +962,9 @@ data DynFlags = DynFlags {
   rtsOptsEnabled        :: RtsOptsEnabled,
   rtsOptsSuggestions    :: Bool,
 
+  expandResponseFiles   :: Bool,
+  -- ^ Only expand response file arguments if this is True.
+
   hpcDir                :: String,      -- ^ Path to store the .mix files
 
   -- Plugins
@@ -1917,6 +1920,8 @@ defaultDynFlags mySettings (myLlvmTargets, myLlvmPasses) =
         rtsOpts                 = Nothing,
         rtsOptsEnabled          = RtsOptsSafeOnly,
         rtsOptsSuggestions      = True,
+
+        expandResponseFiles     = False,
 
         hpcDir                  = ".hpc",
 
@@ -3105,6 +3110,8 @@ dynamic_flags_deps = [
         (NoArg (setRtsOptsEnabled RtsOptsNone))
   , make_ord_flag defGhcFlag "no-rtsopts-suggestions"
       (noArg (\d -> d {rtsOptsSuggestions = False}))
+  , make_ord_flag defGhcFlag "expand-response-files"
+      (noArg (\d -> d {expandResponseFiles = True}))
   , make_ord_flag defGhcFlag "dhex-word-literals"
         (NoArg (setGeneralFlag Opt_HexWordLiterals))
 

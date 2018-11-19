@@ -104,7 +104,11 @@ mkExtraObjToLinkIntoBinary dflags = do
             <> text (if rtsOptsSuggestions dflags
                         then "true"
                         else "false") <> semi,
-        text "__conf.keep_cafs = "
+        text " __conf.expand_response_files = "
+            <> text (if expandResponseFiles dflags
+                        then "true"
+                        else "false") <> semi,
+        text " __conf.keep_cafs = "
             <> text (if gopt Opt_KeepCAFs dflags
                        then "true"
                        else "false") <> semi,

@@ -1024,6 +1024,25 @@ for example).
     distributing binaries to build with either ``-rtsopts`` or
     ``-no-rtsopts-suggestions``.
 
+.. ghc-flag:: -expand-response-files
+    :shortdesc: Expand response file arguments at runtime.
+    :type: dynamic
+    :category: linking
+
+    If the flag is ON:
+
+    - The RTS expands response files
+    - getArgsWithResponseFiles and getArgs behave the same, and return the
+      command line arguments after expanding response files and removing RTS flags.
+
+    Otherwise:
+
+    - The RTS does not expand response files
+    - getArgs works in the usual way (doesn't expand response files, and
+      filters RTS flags passed over the command line).
+    - getArgsWithResponseFiles expands response files, but doesn't process
+      the RTS flags contained in a file.
+
 .. ghc-flag:: -fno-gen-manifest
     :shortdesc: Do not generate a manifest file (Windows only)
     :type: dynamic
