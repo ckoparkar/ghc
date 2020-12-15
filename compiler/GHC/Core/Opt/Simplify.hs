@@ -7,7 +7,7 @@
 {-# LANGUAGE CPP #-}
 
 {-# OPTIONS_GHC -Wno-incomplete-record-updates -Wno-incomplete-uni-patterns #-}
-module GHC.Core.Opt.Simplify ( simplTopBinds, simplExpr, simplRules ) where
+module GHC.Core.Opt.Simplify ( simplTopBinds, simplExpr, simplRules, toANF' ) where
 
 #include "HsVersions.h"
 
@@ -559,6 +559,89 @@ mkCastWrapperInlinePrag (InlinePragma { inl_act = act, inl_rule = rule_info })
     -- But simpler, because we don't need to disable during InitialPhase
     wrap_act | isNeverActive act = activateDuringFinal
              | otherwise         = act
+
+-- | Convert an expression to ANF.
+toANF' :: SimplEnv -> TopLevelFlag
+       -> FastString -- Base for any new variables
+       -> InExpr
+       -> SimplM OutExpr
+toANF' simpl_env top_lvl occ rhs0
+  = do  { (prepd_floats, rhs1) <- go rhs0
+        ; let floats = emptyFloats simpl_env `addLetFloats` prepd_floats
+        ; let rhs2 = wrapFloats floats rhs1
+        ; return rhs2 }
+  where
+    go :: InExpr -> SimplM (LetFloats, OutExpr)
+    go (Var v)
+        = return (emptyLetFloats, Var v)
+    go (Lit lit)
+        = return (emptyLetFloats, Lit lit)
+    go (App fun (Type ty))
+        = do { (floats, rhs') <- go fun
+             ; return (floats, App rhs' (Type ty)) }
+    go (App fun arg)
+        = do { (floats1, fun') <- go fun
+             ; (floats2, arg') <- go arg
+             ; (floats3, arg'') <- makeTrivial (getMode simpl_env) top_lvl topDmd occ arg'
+             ; return (floats1 `addLetFlts` floats2 `addLetFlts` floats3, App fun' arg'') }
+    go (Lam v rhs)
+        = do { (floats0, rhs') <- go rhs
+             ; let floats = emptyFloats simpl_env `addLetFloats` floats0
+             ; let rhs'' = wrapFloats floats rhs'
+             ; return (emptyLetFloats, Lam v rhs'') }
+    go (Let bind bod)
+        = do { (floats1, bind') <- gobind bind
+             ; (floats2, bod') <- go bod
+             ; let floats = emptyFloats simpl_env `addLetFloats` floats2
+             ; let bod'' = wrapFloats floats bod'
+             ; return (floats1, Let bind' bod'') }
+    go (Case scrt v ty alts)
+        = do { (floats0, scrt') <- go scrt
+             ; alts' <- mapM (\(altcon,vars,rhs) ->
+                                 do { (floats1, rhs') <- go rhs
+                                    ; let floats = emptyFloats simpl_env `addLetFloats` floats1
+                                    ; let rhs'' = wrapFloats floats rhs'
+                                    ;  return (altcon, vars, rhs'') })
+                             alts
+             ; return (floats0, Case scrt' v ty alts') }
+    go (Cast rhs co)
+        = do { (floats, rhs') <- go rhs
+             ; return (floats, Cast rhs' co) }
+    go (Tick t rhs)
+        -- We want to be able to float bindings past this
+        -- tick. Non-scoping ticks don't care.
+        | tickishScoped t == NoScope
+        = do { (floats, rhs') <- go rhs
+             ; return (floats, Tick t rhs') }
+
+        -- On the other hand, for scoping ticks we need to be able to
+        -- copy them on the floats, which in turn is only allowed if
+        -- we can obtain non-counting ticks.
+        | (not (tickishCounts t) || tickishCanSplit t)
+        = do { (floats, rhs') <- go rhs
+             ; let tickIt (id, expr) = (id, mkTick (mkNoCount t) expr)
+                   floats' = mapLetFloats floats tickIt
+             ; return (floats', Tick t rhs') }
+    go (Type t)
+        = return (emptyLetFloats, Type t)
+    go (Coercion co)
+        = return (emptyLetFloats, Coercion co)
+    go other
+        = return (emptyLetFloats, other)
+
+    gobind (NonRec v rhs)
+        = do { (floats, rhs') <- go rhs
+             ; return (floats, NonRec v rhs') }
+    gobind (Rec ls)
+        = do { ls' <- mapM (\(b,rhs) ->
+                               do { (floats0, rhs') <- go rhs
+                                  ; let floats = emptyFloats simpl_env `addLetFloats` floats0
+                                  ; let rhs'' = wrapFloats floats rhs'
+                                  ; return (b, rhs'') })
+                           ls
+             ; return (emptyLetFloats, Rec ls') }
+
+
 
 {- Note [prepareRhs]
 ~~~~~~~~~~~~~~~~~~~~

@@ -6,7 +6,7 @@
 
 {-# LANGUAGE CPP #-}
 
-module GHC.Core.Opt.Pipeline ( core2core, simplifyExpr ) where
+module GHC.Core.Opt.Pipeline ( core2core, simplifyExpr, toANF ) where
 
 #include "HsVersions.h"
 
@@ -27,7 +27,7 @@ import GHC.Core.Stats   ( coreBindsSize, coreBindsStats, exprSize )
 import GHC.Core.Utils   ( mkTicks, stripTicksTop )
 import GHC.Core.Lint    ( endPass, lintPassResult, dumpPassResult,
                           lintAnnots )
-import GHC.Core.Opt.Simplify       ( simplTopBinds, simplExpr, simplRules )
+import GHC.Core.Opt.Simplify       ( simplTopBinds, simplExpr, simplRules, toANF' )
 import GHC.Core.Opt.Simplify.Utils ( simplEnvForGHCi, activeRule, activeUnfolding )
 import GHC.Core.Opt.Simplify.Env
 import GHC.Core.Opt.Simplify.Monad
@@ -56,6 +56,7 @@ import GHC.Unit.Module.Env
 import GHC.Driver.Plugins ( withPlugins, installCoreToDos )
 import GHC.Runtime.Loader -- ( initializePlugins )
 
+import GHC.Data.FastString ( fsLit )
 import GHC.Types.Unique.Supply ( UniqSupply, mkSplitUniqSupply, splitUniqSupply )
 import GHC.Types.Unique.FM
 import GHC.Utils.Outputable
@@ -1048,3 +1049,25 @@ transferIdInfo exported_id local_id
                                (ruleInfo local_info)
         -- Remember to set the function-name field of the
         -- rules as we transfer them from one function to another
+
+
+-----------------
+-- | Convert an expression to ANF.
+toANF :: HscEnv -> CoreExpr -> IO CoreExpr
+toANF hsc_env expr =
+    do  { eps <- hscEPS hsc_env ;
+        ; let rule_env  = mkRuleEnv (eps_rule_base eps) []
+              fi_env    = ( eps_fam_inst_env eps
+                          , extendFamInstEnvList emptyFamInstEnv $
+                            snd $ ic_instances $ hsc_IC hsc_env )
+              simpl_env = simplEnvForGHCi dflags
+
+        ; us <-  mkSplitUniqSupply 's'
+        ; let sz = exprSize expr
+
+        ; (expr', _counts) <- initSmpl dflags rule_env fi_env us sz $
+                              toANF' simpl_env TopLevel (fsLit "s") expr
+
+        ; return expr' }
+  where
+    dflags = hsc_dflags hsc_env
