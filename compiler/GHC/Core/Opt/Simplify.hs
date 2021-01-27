@@ -592,9 +592,12 @@ toANF' simpl_env top_lvl occ rhs0
     go (Let bind bod)
         = do { (floats1, bind') <- gobind bind
              ; (floats2, bod') <- go bod
-             ; let floats = emptyFloats simpl_env `addLetFloats` floats2
-             ; let bod'' = wrapFloats floats bod'
-             ; return (floats1, Let bind' bod'') }
+             ; let floats = floats1 `addLetFlts` unitLetFloat bind' `addLetFlts` floats2
+             -- ; let bod'' = wrapFloats floats bod'
+             -- ; return (floats1, Let bind' bod'')
+             -- AUDITME(ckoparkar):
+             ; return (floats, bod')
+             }
     go (Case scrt v ty alts)
         = do { (floats0, scrt') <- go scrt
              ; alts' <- mapM (\(altcon,vars,rhs) ->
